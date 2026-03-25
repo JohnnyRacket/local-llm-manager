@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"   # Next.js
+      - "8080:8080"   # llama-server GPU instance
+      - "8081:8081"   # llama-server CPU instance
+    volumes:
+      # Mount source for hot reload, but not node_modules or llama builds
+      - ./app:/app/app
+      - ./components:/app/components
+      - ./hooks:/app/hooks
+      - ./lib:/app/lib
+      - ./public:/app/public
+      # Persist HuggingFace model cache between restarts
+      - hf-cache:/home/node/.cache/huggingface
+
+    environment:
+      - HOME=/home/node
+      # Small test models for local development (override with your real models)
+      - LLM_DEFAULT_GPU_MODEL=ggml-org/SmolLM2-135M-Instruct-GGUF:smollm2-135m-instruct-q8_0.gguf
+      - LLM_DEFAULT_CPU_MODEL=ggml-org/SmolLM2-135M-Instruct-GGUF:smollm2-135m-instruct-q8_0.gguf
+
+volumes:
+  hf-cache:
