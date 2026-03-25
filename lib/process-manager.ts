@@ -27,6 +27,11 @@ class ProcessManager {
     const child = spawn(config.binaryPath, args, {
       stdio: ["ignore", "pipe", "pipe"],
       detached: false,
+      env: {
+        ...process.env,
+        HOME: process.env.HOME,
+        PATH: process.env.PATH,
+      },
     })
 
     const managed: ManagedProcess = {
