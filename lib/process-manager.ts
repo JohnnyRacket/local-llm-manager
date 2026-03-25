@@ -273,7 +273,9 @@ class ProcessManager {
   }
 }
 
-// Singleton — survives hot reloads in dev via globalThis
+// Singleton — must persist across all module imports in every environment.
+// In dev this survives hot reloads; in production it ensures server actions
+// and API route handlers share the same instance.
 const globalForPM = globalThis as unknown as {
   processManager?: ProcessManager
 }
@@ -281,6 +283,4 @@ const globalForPM = globalThis as unknown as {
 export const processManager =
   globalForPM.processManager ?? new ProcessManager()
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPM.processManager = processManager
-}
+globalForPM.processManager = processManager
