@@ -1,6 +1,15 @@
 import { spawn, type ChildProcess } from "node:child_process"
+import { existsSync } from "node:fs"
 import { EventEmitter } from "node:events"
 import type { InstanceConfig, InstanceId } from "./types"
+
+function log(msg: string) {
+  console.log(`[process-manager] ${msg}`)
+}
+
+function logError(msg: string) {
+  console.error(`[process-manager] ${msg}`)
+}
 
 const MAX_LOG_LINES = 1000
 
@@ -23,7 +32,21 @@ class ProcessManager {
       this.stopSync(config.id)
     }
 
+    log(`Starting ${config.id}`)
+    log(`  Binary: ${config.binaryPath}`)
+    log(`  Binary exists: ${existsSync(config.binaryPath)}`)
+    log(`  HOME=${process.env.HOME ?? "(unset)"}`)
+    log(`  PATH=${process.env.PATH ?? "(unset)"}`)
+
+    if (!existsSync(config.binaryPath)) {
+      const msg = `Binary not found: ${config.binaryPath}`
+      logError(msg)
+      throw new Error(msg)
+    }
+
     const args = this.buildArgs(config)
+    log(`  Args: ${args.join(" ")}`)
+
     const child = spawn(config.binaryPath, args, {
       stdio: ["ignore", "pipe", "pipe"],
       detached: false,
@@ -33,6 +56,8 @@ class ProcessManager {
         PATH: process.env.PATH,
       },
     })
+
+    log(`  Spawned PID: ${child.pid ?? "(failed to spawn)"}`)
 
     const managed: ManagedProcess = {
       process: child,
@@ -81,12 +106,14 @@ class ProcessManager {
     })
 
     child.on("error", (err) => {
+      logError(`${config.id} spawn error: ${err.message}`)
       managed.state = "error"
       managed.errorMessage = err.message
       pushLog(`[error] ${err.message}`)
     })
 
     child.on("exit", (code, signal) => {
+      log(`${config.id} exited: code=${code}, signal=${signal}`)
       pushLog(
         `[exit] Process exited with code ${code}, signal ${signal}`
       )
